@@ -1,5 +1,5 @@
 use anyhow::Result;
-use axum::extract::Query;
+use axum::extract::{State, Query};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -11,19 +11,32 @@ use image::{ImageFormat, Rgba};
 use imageproc::drawing::draw_text_mut;
 use std::io::Cursor;
 
+use shuttle_persist::PersistInstance;
+
 #[derive(Serialize, Deserialize)]
 struct Payload {
     title: String,
 }
 
 #[shuttle_runtime::main]
-async fn main() -> shuttle_axum::ShuttleAxum {
-    let route = Router::new().route("/image", get(image_handler));
+async fn main(
+    #[shuttle_persist::Persist] persist: PersistInstance
+) -> shuttle_axum::ShuttleAxum {
+    let route = Router::new().route("/image", get(image_handler)).with_state(persist);
 
     Ok(route.into())
 }
 
-async fn image_handler(Query(params): Query<Payload>) -> Result<impl IntoResponse, StatusCode> {
+#[axum_macros::debug_handler]
+async fn image_handler(
+    State(persist): State<PersistInstance>,
+    Query(params): Query<Payload>,
+) -> Result<impl IntoResponse, StatusCode> {
+    if let Ok(bytes) = persist.load::<Vec<u8>>(&params.title) {
+        let response = ([(header::CONTENT_TYPE, "image/png")], bytes);
+        return Ok(response);
+    }
+    
     let mut img = image::open("./backgrounds/wave-haikei.png")
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -66,6 +79,8 @@ async fn image_handler(Query(params): Query<Payload>) -> Result<impl IntoRespons
     let mut bytes: Vec<u8> = Vec::new();
     img.write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    persist.save(&params.title, bytes.clone()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let response = ([(header::CONTENT_TYPE, "image/png")], bytes);
     Ok(response)
 }
