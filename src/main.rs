@@ -31,6 +31,7 @@ async fn image_handler(Query(params): Query<Payload>) -> Result<impl IntoRespons
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let font = FontRef::try_from_slice(include_bytes!("../fonts/LINESeedJP_A_TTF_Rg.ttf")).unwrap();
+    println!("LOAD");
 
     let scale = PxScale { x: 50.0, y: 50.0 };
     draw_text_mut(
