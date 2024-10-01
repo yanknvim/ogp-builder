@@ -16,14 +16,11 @@ struct Payload {
     title: String,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+#[shuttle_runtime::main]
+async fn main() -> shuttle_axum::ShuttleAxum {
     let route = Router::new().route("/image", get(image_handler));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    axum::serve(listener, route).await?;
-
-    Ok(())
+    Ok(route.into())
 }
 
 async fn image_handler(Query(params): Query<Payload>) -> Result<impl IntoResponse, StatusCode> {
@@ -31,7 +28,6 @@ async fn image_handler(Query(params): Query<Payload>) -> Result<impl IntoRespons
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let font = FontRef::try_from_slice(include_bytes!("../fonts/LINESeedJP_A_TTF_Rg.ttf")).unwrap();
-    println!("LOAD");
 
     let scale = PxScale { x: 50.0, y: 50.0 };
     draw_text_mut(

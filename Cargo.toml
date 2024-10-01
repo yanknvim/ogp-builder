@@ -11,4 +11,6 @@ glyph_brush_layout = "0.2.4"
 image = "0.25.2"
 imageproc = "0.25.0"
 serde = { version = "1.0.210", features = ["derive"] }
+shuttle-axum = "0.47.0"
+shuttle-runtime = "0.47.0"
 tokio = { version = "1.40.0", features = ["full"] }
